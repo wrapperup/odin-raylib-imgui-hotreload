@@ -1,0 +1,45 @@
+version: '3'
+
+tasks:
+  default:
+    - task: run
+
+  # The main executable will load game.dll when it's updated.
+  hotreload:
+    - task: build-debug-game
+
+  run:
+    deps:
+      - task: build-debug
+    cmds:
+      - cd ./build && ./main.exe
+
+  # This requires raddbg to be in PATH
+  debug:
+    deps:
+      - task: build-debug-main
+    cmds:
+      - powershell ./debug-rad.ps1
+
+  # I hate this
+  copy-game-files:
+    - xcopy .\\assets\\ .\\build\\assets\\ /E /H /I /Y
+
+  # Build Tasks
+  # TODO: Probably put these in bats/psh scripts instead.
+  build-debug:
+    - task: copy-game-files
+    - task: build-debug-main
+    - task: build-debug-game
+
+  build-debug-game:
+    cmds:
+      - odin build game.odin -file -build-mode:dll -out:build/game.dll -collection:deps=./deps -debug -define:RAYLIB_SHARED=true 
+
+  build-debug-main:
+    cmds:
+      - odin build main.odin -file -out:build/main.exe -collection:deps=./deps -debug -define:RAYLIB_SHARED=true
+
+  check:
+    cmds:
+      - odin check . -strict-style -warnings-as-errors -vet
